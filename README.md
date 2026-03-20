@@ -24,7 +24,13 @@ Add to your `lua/plugins/` directory (e.g. `lua/plugins/epita-lint.lua`):
 
 ```lua
 return {
-  { import = "epita-nvim-lint" },
+  {
+    "KazeTachinuu/epita-nvim-lint",
+    dependencies = { "mfussenegger/nvim-lint" },
+    config = function()
+      require("epita-nvim-lint").setup()
+    end,
+  },
 }
 ```
 

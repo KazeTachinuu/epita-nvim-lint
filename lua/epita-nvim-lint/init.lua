@@ -9,13 +9,13 @@ local severity_map = {
 local config_files = { ".epita-style", ".epita-style.toml", "epita-style.toml" }
 
 local function find_project_root(fname)
-  local root = vim.fs.find(config_files, {
+  local match = vim.fs.find(config_files, {
     path = vim.fn.fnamemodify(fname, ":h"),
     upward = true,
     type = "file",
   })[1]
-  if root then
-    return vim.fn.fnamemodify(root, ":h")
+  if match then
+    return vim.fn.fnamemodify(match, ":h")
   end
   return vim.fn.fnamemodify(fname, ":h")
 end
@@ -27,6 +27,10 @@ function M.setup()
     return
   end
 
+  if vim.fn.executable("epita-coding-style") ~= 1 then
+    return
+  end
+
   lint.linters.epita_coding_style = {
     cmd = "epita-coding-style",
     stdin = false,
@@ -34,11 +38,7 @@ function M.setup()
     args = {},
     stream = "stdout",
     ignore_exitcode = true,
-    cwd = function()
-      local fname = vim.api.nvim_buf_get_name(0)
-      return find_project_root(fname)
-    end,
-    parser = function(output, bufnr)
+    parser = function(output, bufnr, linter_cwd)
       local diagnostics = {}
       local bufname = vim.api.nvim_buf_get_name(bufnr)
       if bufname == "" then
@@ -49,6 +49,10 @@ function M.setup()
         local file, lnum, col, sev, msg =
           line:match("^(.+):(%d+):(%d+): (%w+): (.+)$")
         if file then
+          -- resolve relative paths against the linter cwd
+          if not file:match("^/") and linter_cwd then
+            file = linter_cwd .. "/" .. file
+          end
           local norm_file = vim.fs.normalize(file)
           if norm_file == norm_bufname then
             table.insert(diagnostics, {
@@ -70,6 +74,20 @@ function M.setup()
 
   lint.linters_by_ft.cpp = lint.linters_by_ft.cpp or {}
   table.insert(lint.linters_by_ft.cpp, "epita_coding_style")
+
+  -- Run epita linter with project-root cwd so config files are found
+  vim.api.nvim_create_autocmd({ "BufWritePost", "BufReadPost", "InsertLeave" }, {
+    group = vim.api.nvim_create_augroup("epita-nvim-lint", { clear = true }),
+    pattern = { "*.c", "*.h", "*.cc", "*.hh", "*.hxx" },
+    callback = function()
+      local fname = vim.api.nvim_buf_get_name(0)
+      if fname == "" then
+        return
+      end
+      local cwd = find_project_root(fname)
+      lint.try_lint("epita_coding_style", { cwd = cwd })
+    end,
+  })
 end
 
 return M

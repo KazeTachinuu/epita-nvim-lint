@@ -6,6 +6,20 @@ local severity_map = {
   note = vim.diagnostic.severity.INFO,
 }
 
+local config_files = { ".epita-style", ".epita-style.toml", "epita-style.toml" }
+
+local function find_project_root(fname)
+  local root = vim.fs.find(config_files, {
+    path = vim.fn.fnamemodify(fname, ":h"),
+    upward = true,
+    type = "file",
+  })[1]
+  if root then
+    return vim.fn.fnamemodify(root, ":h")
+  end
+  return vim.fn.fnamemodify(fname, ":h")
+end
+
 function M.setup()
   local ok, lint = pcall(require, "lint")
   if not ok then
@@ -20,6 +34,10 @@ function M.setup()
     args = {},
     stream = "stdout",
     ignore_exitcode = true,
+    cwd = function()
+      local fname = vim.api.nvim_buf_get_name(0)
+      return find_project_root(fname)
+    end,
     parser = function(output, bufnr)
       local diagnostics = {}
       local bufname = vim.api.nvim_buf_get_name(bufnr)

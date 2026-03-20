@@ -18,18 +18,15 @@ pipx install epita-coding-style
 
 ## Install the plugin
 
-### [lazy.nvim](https://github.com/folke/lazy.nvim)
+### [lazy.nvim](https://github.com/folke/lazy.nvim) / [LazyVim](https://www.lazyvim.org/)
+
+Add to your `lua/plugins/` directory (e.g. `lua/plugins/epita-lint.lua`):
 
 ```lua
-{
-  "KazeTachinuu/epita-nvim-lint",
-  dependencies = { "mfussenegger/nvim-lint" },
+return {
+  { import = "epita-nvim-lint" },
 }
 ```
-
-### [LazyVim](https://www.lazyvim.org/)
-
-Just clone or symlink `lua/plugins/epita-lint.lua` into your `~/.config/nvim/lua/plugins/` directory — LazyVim auto-loads it.
 
 ## Configuration
 

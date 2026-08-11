@@ -72,7 +72,7 @@ function M.setup()
   -- double-linting; file-based linter, so on-disk events only.
   vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost" }, {
     group = vim.api.nvim_create_augroup("epita-nvim-lint", { clear = true }),
-    pattern = { "*.c", "*.h", "*.cc", "*.hh", "*.hxx" },
+    pattern = { "*.c", "*.h", "*.cc", "*.hh", "*.hxx", "*.cpp", "*.hpp" },
     callback = function(ev)
       local fname = vim.api.nvim_buf_get_name(ev.buf)
       if fname ~= "" then

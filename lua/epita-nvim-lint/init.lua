@@ -68,9 +68,8 @@ function M.setup()
     end,
   }
 
-  -- File-based linter (stdin = false): lint only what is on disk.
-  -- Owns its autocmd instead of registering in linters_by_ft, so the
-  -- project-root cwd is always applied and the linter never runs twice.
+  -- Own autocmd, not linters_by_ft: keeps project-root cwd and avoids
+  -- double-linting; file-based linter, so on-disk events only.
   vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost" }, {
     group = vim.api.nvim_create_augroup("epita-nvim-lint", { clear = true }),
     pattern = { "*.c", "*.h", "*.cc", "*.hh", "*.hxx" },

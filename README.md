@@ -27,12 +27,15 @@ return {
   {
     "KazeTachinuu/epita-nvim-lint",
     dependencies = { "mfussenegger/nvim-lint" },
+    ft = { "c", "cpp" },
     config = function()
       require("epita-nvim-lint").setup()
     end,
   },
 }
 ```
+
+Diagnostics appear on file open and after each save.
 
 ## Configuration
 

@@ -3,21 +3,17 @@ local M = {}
 local severity_map = {
   error = vim.diagnostic.severity.ERROR,
   warning = vim.diagnostic.severity.WARN,
-  note = vim.diagnostic.severity.INFO,
 }
 
 local config_files = { ".epita-style", ".epita-style.toml", "epita-style.toml" }
 
-local function find_project_root(fname)
-  local match = vim.fs.find(config_files, {
-    path = vim.fn.fnamemodify(fname, ":h"),
+local function project_root(fname)
+  local found = vim.fs.find(config_files, {
+    path = vim.fs.dirname(fname),
     upward = true,
     type = "file",
   })[1]
-  if match then
-    return vim.fn.fnamemodify(match, ":h")
-  end
-  return vim.fn.fnamemodify(fname, ":h")
+  return found and vim.fs.dirname(found) or vim.fs.dirname(fname)
 end
 
 function M.setup()
@@ -28,6 +24,10 @@ function M.setup()
   end
 
   if vim.fn.executable("epita-coding-style") ~= 1 then
+    vim.notify(
+      "epita-nvim-lint: epita-coding-style not found (pipx install epita-coding-style)",
+      vim.log.levels.WARN
+    )
     return
   end
 
@@ -53,8 +53,7 @@ function M.setup()
           if not file:match("^/") and linter_cwd then
             file = linter_cwd .. "/" .. file
           end
-          local norm_file = vim.fs.normalize(file)
-          if norm_file == norm_bufname then
+          if vim.fs.normalize(file) == norm_bufname then
             table.insert(diagnostics, {
               lnum = tonumber(lnum) - 1,
               col = tonumber(col) - 1,
@@ -69,23 +68,17 @@ function M.setup()
     end,
   }
 
-  lint.linters_by_ft.c = lint.linters_by_ft.c or {}
-  table.insert(lint.linters_by_ft.c, "epita_coding_style")
-
-  lint.linters_by_ft.cpp = lint.linters_by_ft.cpp or {}
-  table.insert(lint.linters_by_ft.cpp, "epita_coding_style")
-
-  -- Run epita linter with project-root cwd so config files are found
-  vim.api.nvim_create_autocmd({ "BufWritePost", "BufReadPost", "InsertLeave" }, {
+  -- File-based linter (stdin = false): lint only what is on disk.
+  -- Owns its autocmd instead of registering in linters_by_ft, so the
+  -- project-root cwd is always applied and the linter never runs twice.
+  vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost" }, {
     group = vim.api.nvim_create_augroup("epita-nvim-lint", { clear = true }),
     pattern = { "*.c", "*.h", "*.cc", "*.hh", "*.hxx" },
-    callback = function()
-      local fname = vim.api.nvim_buf_get_name(0)
-      if fname == "" then
-        return
+    callback = function(ev)
+      local fname = vim.api.nvim_buf_get_name(ev.buf)
+      if fname ~= "" then
+        lint.try_lint("epita_coding_style", { cwd = project_root(fname) })
       end
-      local cwd = find_project_root(fname)
-      lint.try_lint("epita_coding_style", { cwd = cwd })
     end,
   })
 end

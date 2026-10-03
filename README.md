@@ -35,7 +35,11 @@ return {
 }
 ```
 
-Diagnostics appear on file open and after each save.
+Diagnostics appear on file open and after each save, but only when the file is
+inside a project containing an `epita-style.toml`, `.epita-style.toml`, or
+`.epita-style` file in its directory or an ancestor directory. The plugin does
+not load `nvim-lint` or check for the `epita-coding-style` executable in other
+C/C++ projects.
 
 ## Configuration
 

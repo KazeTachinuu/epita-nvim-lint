@@ -13,14 +13,14 @@ local function project_root(fname)
     upward = true,
     type = "file",
   })[1]
-  return found and vim.fs.dirname(found) or vim.fs.dirname(fname)
+  return found and vim.fs.dirname(found) or nil
 end
 
-function M.setup()
+local function setup_linter()
   local ok, lint = pcall(require, "lint")
   if not ok then
     vim.notify("epita-nvim-lint: nvim-lint is required", vim.log.levels.ERROR)
-    return
+    return nil
   end
 
   if vim.fn.executable("epita-coding-style") ~= 1 then
@@ -28,7 +28,7 @@ function M.setup()
       "epita-nvim-lint: epita-coding-style not found (pipx install epita-coding-style)",
       vim.log.levels.WARN
     )
-    return
+    return nil
   end
 
   lint.linters.epita_coding_style = {
@@ -68,15 +68,36 @@ function M.setup()
     end,
   }
 
+  return lint
+end
+
+function M.setup()
+  local lint
+  local linter_initialized = false
+
   -- Own autocmd, not linters_by_ft: keeps project-root cwd and avoids
-  -- double-linting; file-based linter, so on-disk events only.
+  -- double-linting; file-based linter, so on-disk events only. Requiring
+  -- nvim-lint is deferred until a project marker is found.
   vim.api.nvim_create_autocmd({ "BufReadPost", "BufWritePost" }, {
     group = vim.api.nvim_create_augroup("epita-nvim-lint", { clear = true }),
     pattern = { "*.c", "*.h", "*.cc", "*.hh", "*.hxx", "*.cpp", "*.hpp" },
     callback = function(ev)
       local fname = vim.api.nvim_buf_get_name(ev.buf)
-      if fname ~= "" then
-        lint.try_lint("epita_coding_style", { cwd = project_root(fname) })
+      if fname == "" then
+        return
+      end
+
+      local root = project_root(fname)
+      if not root then
+        return
+      end
+
+      if not linter_initialized then
+        lint = setup_linter()
+        linter_initialized = true
+      end
+      if lint then
+        lint.try_lint("epita_coding_style", { cwd = root })
       end
     end,
   })

@@ -8,9 +8,12 @@ local severity_map = {
 local config_files = { ".epita-style", ".epita-style.toml", "epita-style.toml" }
 
 local function project_root(fname)
+  local cwd = vim.fs.normalize(vim.fn.getcwd())
+  local stop = vim.fs.dirname(cwd)
   local found = vim.fs.find(config_files, {
     path = vim.fs.dirname(fname),
     upward = true,
+    stop = stop,
     type = "file",
   })[1]
   return found and vim.fs.dirname(found) or nil
